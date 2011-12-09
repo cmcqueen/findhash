@@ -2,6 +2,9 @@
 from collections import defaultdict
 
 def shift_vector_gen(smin, smax, n):
+    if n > 1:
+        for x in shift_vector_gen(smin, smax, n - 1):
+            yield x
     vector = list(xrange(smin, smin + n))
     while True:
         yield tuple(vector)
@@ -65,6 +68,39 @@ def find_hash(o, hash_functions, max_collisions_thresh = 1):
             ((num_collisions == best_collision_result['collisions']) and (hash_size < best_collision_result['size']))):
                 best_collision_result = { 'size' : hash_size, 'collisions' : num_collisions, 'f_hash_size' : f_hash_size, 'f': f } 
     return (best_size_result, best_collision_result)
+
+def make_hash_lookup(o, hash_function, invalid_value_iter):
+    hash_lookup = dict()
+    for i in o:
+        hash = hash_function(i)
+        hash_lookup[hash] = i
+
+    # Find a suitable "invalid" value to fill the holes
+    for i in invalid_value_iter:
+        if hash_lookup.get(hash_function(i), i) != i:
+            invalid_value = i
+            break
+    else:
+        raise Exception("Couldn't find invalid value to fill holes")
+    # Fill in holes with "invalid" value
+    for hash in xrange(hash_function.hash_size):
+        if hash not in hash_lookup:
+            hash_lookup[hash] = invalid_value
+
+    return hash_lookup
+
+def make_hash_data(d, hash_function, invalid_value):
+    hash_data = dict()
+    for i, value in d.iteritems():
+        hash = hash_function(i)
+        hash_data[hash] = value
+
+    # Fill in holes with "invalid" value
+    for hash in xrange(hash_function.hash_size):
+        if hash not in hash_data:
+            hash_data[hash] = invalid_value
+
+    return hash_data
 
 
 if __name__ == "__main__":
