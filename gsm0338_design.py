@@ -19,148 +19,119 @@ from pprint import pprint
 import findhash
 import gsm0338_parse
 
-def make_unicode_to_7bit_hash(input_type_max = 0xFFFF):
-    def hash_functions_gen():
-        return findhash.shift_functions_gen(-15, 19, 3, 256)
+def parse_shift_table(stream):
+    for line in stream:
+        line = line.strip('\n\r')
+        if len(line) > 1:
+            line = line.encode('utf-8').decode('unicode_escape')
+        elif len(line) == 0:
+            line = ' '
+        yield line
 
-    unicode_data = gsm0338_parse.read_unicode_data()
-    unicode_dict = dict((unicode, gsm) for (unicode, gsm, comment) in unicode_data)
+def read_locking_7bit(filename):
+    locking_dict = {}
+    with open(filename, 'r', encoding='utf-8-sig') as f:
+        for i, line in enumerate(parse_shift_table(f)):
+            line_int = ord(line)
+            if line_int != i:
+                locking_dict[i] = line_int
+    return locking_dict
+
+def print_tables(tables):
+    for table in tables:
+        max_value = max(table)
+        for i, x in enumerate(table):
+            if i % 16 == 0:
+                print()
+            if max_value > 0xFFFF:
+                print("0x{0:08X},".format(x), end='')
+            elif max_value > 0xFF:
+                print("0x{0:04X},".format(x), end='')
+            else:
+                print("0x{0:02X},".format(x), end='')
+        print()
+
+def max_size_for_data(data):
+    max_value = max(data)
+    if max_value > 0xFFFF:
+        return 0xFFFFFFFF
+    elif max_value > 0xFF:
+        return 0xFFFF
+    else:
+        return 0xFF
+
+def make_hash(data_dict, input_bits, hash_bits, hash_shifts, find_collision_free = True, find_best = True, select_manual = None, invalid_fill_values = None):
+    def hash_functions_gen():
+        return findhash.shift_functions_gen(-input_bits + 1, hash_bits + hash_shifts, hash_shifts, 2**hash_bits)
 
     # All collision-free hashes
-    if 1:
+    if find_collision_free:
         print('\nAll collision-free hashes:')
         collision_free = []
-        for result in findhash.find_collision_free_hashes(unicode_dict, hash_functions_gen()):
+        for result in findhash.find_collision_free_hashes(data_dict, hash_functions_gen()):
             collision_free.append(result)
             print(result, result['f'].__doc__)
 
     # "best" hash
-    if 1:
+    if find_best:
         print('\n"Best" hashes:')
-        (best_size_result, best_collision_result) = findhash.find_best_hash(unicode_dict, hash_functions_gen())
+        (best_size_result, best_collision_result) = findhash.find_best_hash(data_dict, hash_functions_gen())
         print(best_size_result, best_size_result['f'].__doc__)
         print(best_collision_result, best_collision_result['f'].__doc__)
 
-    if 0:
+    if select_manual == None:
         # Use "best"
         best_result = best_collision_result
     else:
         # Manually select the most appealing of the collision-free hashes
-        best_result = collision_free[0]
+        best_result = collision_free[select_manual]
     f = best_result['f']
     
+    if invalid_fill_values == None:
+        invalid_fill_values = range(max_size_for_data(data_dict), -1, -1)
+    hash_lookup = findhash.make_hash_lookup(data_dict, f, invalid_fill_values)
+    hash_data = findhash.make_hash_data(data_dict, f, max_size_for_data(data_dict.values()))
+    
+    print("\nTables with function {0}".format(f.__doc__))
+    print_tables( (hash_lookup, hash_data) )
+
+def make_unicode_to_7bit_hash(input_type_max = 0xFFFF):
+    unicode_data = gsm0338_parse.read_unicode_data()
+    unicode_dict = dict((unicode, gsm) for (unicode, gsm, comment) in unicode_data)
+
     invalid_fill_values = range(input_type_max, -1, -1)
     #invalid_fill_values = range(0xFFFF, 0, -0x1111)
     #invalid_fill_values = range(0, 0x10000, 0x1111)
     #invalid_fill_values = range(0xFFF0, 0, -0x1110)
-    hash_lookup = findhash.make_hash_lookup(unicode_dict, f, invalid_fill_values)
-    hash_data = findhash.make_hash_data(unicode_dict, f, 0xFF)
 
-    print("\nTables with function {0}".format(f.__doc__))
-    for i, x in enumerate(hash_lookup):
-        if i % 16 == 0:
-            print()
-        print("0x{0:04X},".format(x), end='')
-    
-    print()
-    for i, x in enumerate(hash_data):
-        if i % 16 == 0:
-            print()
-        print("0x{0:02X},".format(x), end='')
+    make_hash(unicode_dict, 16, 8, 3, True, True, 0, invalid_fill_values)
 
-def make_7bit_to_unicode_hash(input_type_max = 0xFF):
-    def hash_functions_gen():
-        return findhash.shift_functions_gen(-7, 11, 3, 64)
-
+def make_7bit_to_unicode_hash():
     default_7bit_data = gsm0338_parse.read_7bit_data()
     default_7bit_dict = dict((gsm, unicode) for (gsm, unicode, comment) in default_7bit_data)
 
-    # All collision-free hashes
-    if 1:
-        print('\nAll collision-free hashes:')
-        collision_free = []
-        for result in findhash.find_collision_free_hashes(default_7bit_dict, hash_functions_gen()):
-            collision_free.append(result)
-            print(result, result['f'].__doc__)
+    make_hash(default_7bit_dict, 8, 6, 3, True, True, 1)
 
-    # "best" hash
-    if 1:
-        print('\n"Best" hashes:')
-        (best_size_result, best_collision_result) = findhash.find_best_hash(default_7bit_dict, hash_functions_gen())
-        print(best_size_result, best_size_result['f'].__doc__)
-        print(best_collision_result, best_collision_result['f'].__doc__)
-
-    if 0:
-        # Use "best"
-        best_result = best_collision_result
-    else:
-        # Manually select the most appealing of the collision-free hashes
-        best_result = collision_free[1]
-    f = best_result['f']
-    
-    invalid_fill_values = range(input_type_max, -1, -1)
-    hash_lookup = findhash.make_hash_lookup(default_7bit_dict, f, invalid_fill_values)
-    hash_data = findhash.make_hash_data(default_7bit_dict, f, 0xFFFF)
-
-    print("\nTables with function {0}".format(f.__doc__))
-    for i, x in enumerate(hash_lookup):
-        if i % 16 == 0:
-            print()
-        print("0x{0:02X},".format(x), end='')
-
-    print()
-    for i, x in enumerate(hash_data):
-        if i % 16 == 0:
-            print()
-        print("0x{0:04X},".format(x), end='')
-
-def make_7bit_escape_to_unicode_hash(input_type_max = 0xFF):
-    def hash_functions_gen():
-        return findhash.shift_functions_gen(-3, 7, 3, 16)
-
+def make_7bit_escape_to_unicode_hash():
     escape_data = gsm0338_parse.read_escape_data()
     escape_dict = dict((gsm, unicode) for (gsm, unicode, comment) in escape_data)
 
-    # All collision-free hashes
-    if 1:
-        print('\nAll collision-free hashes:')
-        collision_free = []
-        for result in findhash.find_collision_free_hashes(escape_dict, hash_functions_gen()):
-            collision_free.append(result)
-            print(result, result['f'].__doc__)
+    make_hash(escape_dict, 8, 4, 3, True, True, 0)
 
-    # "best" hash
-    if 1:
-        print('\n"Best" hashes:')
-        (best_size_result, best_collision_result) = findhash.find_best_hash(escape_dict, hash_functions_gen())
-        print(best_size_result, best_size_result['f'].__doc__)
-        print(best_collision_result, best_collision_result['f'].__doc__)
+def make_7bit_portuguese_to_unicode_hash():
+    default_7bit_dict = read_locking_7bit('tables/portuguese_locking_shift.txt')
 
-    if 0:
-        # Use "best"
-        best_result = best_collision_result
-    else:
-        # Manually select the most appealing of the collision-free hashes
-        best_result = collision_free[0]
-    f = best_result['f']
-    
-    invalid_fill_values = range(input_type_max, -1, -1)
-    hash_lookup = findhash.make_hash_lookup(escape_dict, f, invalid_fill_values)
-    hash_data = findhash.make_hash_data(escape_dict, f, 0xFFFF)
+    make_hash(default_7bit_dict, 8, 6, 3, True, True, 1)
 
-    print("\nTables with function {0}".format(f.__doc__))
-    for i, x in enumerate(hash_lookup):
-        if i % 16 == 0:
-            print()
-        print("0x{0:02X},".format(x), end='')
+def make_7bit_turkish_to_unicode_hash():
+    default_7bit_dict = read_locking_7bit('tables/turkish_locking_shift.txt')
 
-    print()
-    for i, x in enumerate(hash_data):
-        if i % 16 == 0:
-            print()
-        print("0x{0:04X},".format(x), end='')
+    make_hash(default_7bit_dict, 8, 6, 3, True, True, 1)
 
 if __name__ == "__main__":
-    make_unicode_to_7bit_hash()
+    #make_unicode_to_7bit_hash_old()
+    #make_unicode_to_7bit_hash()
     #make_7bit_to_unicode_hash()
     #make_7bit_escape_to_unicode_hash()
+    #make_7bit_portuguese_to_unicode_hash()
+    make_7bit_turkish_to_unicode_hash()
