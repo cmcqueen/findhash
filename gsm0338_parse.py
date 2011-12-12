@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
 """
-Python 2.x program
+Python 3.x program
 
 Parse GSM0338.TXT file to generate C code for SMS handling of GSM 03.38 which
 specifies SMS 7-bit alphabet. C code tables are needed for:
@@ -19,7 +20,7 @@ from collections import defaultdict
 GSM0338_FILENAME = 'GSM0338.TXT'
 
 # Regular expression for mapping table entries. Matches 7-bit code values, Unicode value, comment
-line_re = re.compile(ur'^\#?0x([0-9a-fA-F]{2})([0-9a-fA-F]*)\s+0x([0-9a-fA-F]{4})\s+\#\s+(.*)$')
+line_re = re.compile(r'^\#?0x([0-9a-fA-F]{2})([0-9a-fA-F]*)\s+0x([0-9a-fA-F]{4})\s+\#\s+(.*)$')
 
 def parse_line(line):
     match = line_re.match(line)

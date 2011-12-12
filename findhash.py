@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 from collections import defaultdict
 
@@ -5,12 +6,12 @@ def shift_vector_gen(smin, smax, n):
     if n > 1:
         for x in shift_vector_gen(smin, smax, n - 1):
             yield x
-    vector = list(xrange(smin, smin + n))
+    vector = list(range(smin, smin + n))
     while True:
         yield tuple(vector)
         i = n - 1
         while True:
-            for j in xrange(i, n):
+            for j in range(i, n):
                 if j == i:
                     vector[j] += 1
                 else:
@@ -56,7 +57,13 @@ def check_hash(o, hash_function):
             max_collisions = hash_output_count[hash]
     return (hash_size, num_collisions, max_collisions, hash_function.hash_size)
 
-def find_hash(o, hash_functions, max_collisions_thresh = 1):
+def find_collision_free_hashes(o, hash_functions):
+    for f in hash_functions:
+        (hash_size, num_collisions, max_collisions, f_hash_size) = check_hash(o, f)
+        if num_collisions == 0:
+            yield { 'size' : hash_size, 'collisions' : num_collisions, 'f_hash_size' : f_hash_size, 'f': f }
+
+def find_best_hash(o, hash_functions, max_collisions_thresh = 1):
     # best_size_result in form (hash_size, num_collisions, f_hash_size, f)
     best_size_result = { 'size' : 1000000000, 'collisions' : 1000000000, 'f_hash_size' : None, 'f' : None }
     best_collision_result = { 'size' : 1000000000, 'collisions' : 1000000000, 'f_hash_size' : None, 'f' : None }
@@ -82,33 +89,30 @@ def make_hash_lookup(o, hash_function, invalid_value_iter):
             break
     else:
         raise Exception("Couldn't find invalid value to fill holes")
-    # Fill in holes with "invalid" value
-    for hash in xrange(hash_function.hash_size):
-        if hash not in hash_lookup:
-            hash_lookup[hash] = invalid_value
 
-    return hash_lookup
+    # Convert to list, filling in holes with "invalid" value
+    hash_lookup_list = [ hash_lookup.get(i, invalid_value) for i in range(hash_function.hash_size) ]
+
+    return hash_lookup_list
 
 def make_hash_data(d, hash_function, invalid_value):
     hash_data = dict()
-    for i, value in d.iteritems():
+    for i, value in d.items():
         hash = hash_function(i)
         hash_data[hash] = value
 
-    # Fill in holes with "invalid" value
-    for hash in xrange(hash_function.hash_size):
-        if hash not in hash_data:
-            hash_data[hash] = invalid_value
+    # Convert to list, filling in holes with "invalid" value
+    hash_data_list = [ hash_data.get(i, invalid_value) for i in range(hash_function.hash_size) ]
 
-    return hash_data
+    return hash_data_list
 
 
 if __name__ == "__main__":
     for f in shift_functions_gen(-3, 6, 3, 16):
-        print f.__doc__
-    print
+        print(f.__doc__)
+    print()
     
-    f = list(shift_functions_gen(-3, 6, 3, 16))[7]
-    print f.__doc__
-    for i in xrange(16):
-        print f(i)
+    f = list(shift_functions_gen(-3, 6, 3, 16))[54]
+    print(f.__doc__)
+    for i in range(f.hash_size):
+        print(f(i))
