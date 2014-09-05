@@ -44,11 +44,11 @@ def print_tables(tables):
             if i % 16 == 0:
                 print()
             if max_value > 0xFFFF:
-                print("0x{0:08X},".format(x), end='')
+                print("0x{0:08X}, ".format(x), end='')
             elif max_value > 0xFF:
-                print("0x{0:04X},".format(x), end='')
+                print("0x{0:04X}, ".format(x), end='')
             else:
-                print("0x{0:02X},".format(x), end='')
+                print("0x{0:02X}, ".format(x), end='')
         print()
 
 def max_size_for_data(data):
@@ -129,9 +129,8 @@ def make_7bit_turkish_to_unicode_hash():
     make_hash(default_7bit_dict, 8, 6, 3, True, True, 1)
 
 if __name__ == "__main__":
-    #make_unicode_to_7bit_hash_old()
-    #make_unicode_to_7bit_hash()
+    make_unicode_to_7bit_hash()
     #make_7bit_to_unicode_hash()
     #make_7bit_escape_to_unicode_hash()
     #make_7bit_portuguese_to_unicode_hash()
-    make_7bit_turkish_to_unicode_hash()
+    #make_7bit_turkish_to_unicode_hash()
