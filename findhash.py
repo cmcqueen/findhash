@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import defaultdict
+import itertools
 
 def shift_vector_gen(smin, smax, n):
     if n > 1:
@@ -25,7 +26,7 @@ def shift_vector_gen(smin, smax, n):
             else:
                 break
 
-def shift_functions_gen(smin, smax, n, hash_size):
+def shift_xor_functions_gen(smin, smax, n, hash_size):
     for shift_vector in shift_vector_gen(smin, smax, n):
         def make_hash_function(shift_vector, hash_size):
             def hash_function(value):
@@ -36,10 +37,31 @@ def shift_functions_gen(smin, smax, n, hash_size):
                     else:
                         out_value ^= value >> (-shift_value)
                 return out_value % hash_size
-            hash_function.__doc__ = "Shift function with vectors {0}, hash size {1}".format(shift_vector, hash_size)
+            hash_function.__doc__ = "Shift-xor function with vectors {0}, hash size {1}".format(shift_vector, hash_size)
             hash_function.hash_size = hash_size
             return hash_function
         yield make_hash_function(shift_vector, hash_size)
+
+def shift_add_functions_gen(smin, smax, n, hash_size):
+    for shift_vector in shift_vector_gen(smin, smax, n):
+        def make_hash_function(shift_vector, hash_size):
+            def hash_function(value):
+                out_value = 0
+                for shift_value in shift_vector:
+                    if shift_value >= 0:
+                        out_value += value << shift_value
+                    else:
+                        out_value += value >> (-shift_value)
+                return out_value % hash_size
+            hash_function.__doc__ = "Shift-add function with vectors {0}, hash size {1}".format(shift_vector, hash_size)
+            hash_function.hash_size = hash_size
+            return hash_function
+        yield make_hash_function(shift_vector, hash_size)
+
+def shift_all_functions_gen(smin, smax, n, hash_size):
+    for x in itertools.chain(shift_xor_functions_gen(smin, smax, n, hash_size),
+                             shift_add_functions_gen(smin, smax, n, hash_size)):
+        yield x
 
 def check_hash(o, hash_function):
     hash_output_count = defaultdict(int)
@@ -108,11 +130,11 @@ def make_hash_data(d, hash_function, invalid_value):
 
 
 if __name__ == "__main__":
-    for f in shift_functions_gen(-3, 6, 3, 16):
+    for f in shift_xor_functions_gen(-3, 6, 3, 16):
         print(f.__doc__)
     print()
     
-    f = list(shift_functions_gen(-3, 6, 3, 16))[54]
+    f = list(shift_xor_functions_gen(-3, 6, 3, 16))[54]
     print(f.__doc__)
     for i in range(f.hash_size):
         print(f(i))

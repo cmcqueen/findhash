@@ -62,7 +62,7 @@ def max_size_for_data(data):
 
 def make_hash(data_dict, input_bits, hash_bits, hash_shifts, find_collision_free = True, find_best = True, select_manual = None, invalid_fill_values = None):
     def hash_functions_gen():
-        return findhash.shift_functions_gen(-input_bits + 1, hash_bits + hash_shifts, hash_shifts, 2**hash_bits)
+        return findhash.shift_all_functions_gen(-input_bits + 1, hash_bits + hash_shifts, hash_shifts, 2**hash_bits)
 
     # All collision-free hashes
     if find_collision_free:
@@ -103,6 +103,7 @@ def make_unicode_to_7bit_hash(input_type_max = 0xFFFF):
     #invalid_fill_values = range(0xFFFF, 0, -0x1111)
     #invalid_fill_values = range(0, 0x10000, 0x1111)
     #invalid_fill_values = range(0xFFF0, 0, -0x1110)
+    #invalid_fill_values = (0xBADD, 0xBAAD, 0xDEAD, 0xBEEF)
 
     make_hash(unicode_dict, 16, 8, 3, True, True, 0, invalid_fill_values)
 
