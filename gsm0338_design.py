@@ -74,9 +74,10 @@ def make_hash(data_dict, input_bits, hash_bits, hash_shifts, find_collision_free
 
     # "best" hash
     if find_best:
-        print('\n"Best" hashes:')
         (best_size_result, best_collision_result) = findhash.find_best_hash(data_dict, hash_functions_gen())
+        print('\n"Best" hash by table size:')
         print(best_size_result, best_size_result['f'].__doc__)
+        print('\n"Best" hash by num collisions:')
         print(best_collision_result, best_collision_result['f'].__doc__)
 
     if select_manual == None:
